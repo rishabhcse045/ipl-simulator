@@ -47,6 +47,7 @@ function buildEmptyRoom(roomId: string, hostUid: string): Room {
     auction: null,
     season: null,
     currentMatch: null,
+    pregame: null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     maxPlayers: 10,

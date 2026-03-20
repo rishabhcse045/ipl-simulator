@@ -25,6 +25,8 @@ export default function AuctionPage() {
   const [error, setError]        = useState("");
   const [lastMsg, setLastMsg]    = useState("");
   const [rightTab, setRightTab]  = useState<"mysquad" | "overview">("mysquad");
+  // Mobile bottom sheet tab: "lot" | "squad"
+  const [mobileTab, setMobileTab] = useState<"lot" | "squad">("lot");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const uidRef   = useRef("");
 
@@ -160,7 +162,6 @@ export default function AuctionPage() {
   }
 
   // ── Derived ───────────────────────────────────────────
-
   const auction        = room?.auction;
   const lot            = auction?.currentLot;
   const currentUid     = uidRef.current || uid;
@@ -175,32 +176,32 @@ export default function AuctionPage() {
   const timerPct       = (timeLeft / TIMER_SECONDS) * 100;
   const timerColor     = timeLeft <= 3 ? "#ff5f57" : timeLeft <= 6 ? "#ffc800" : "#4caf50";
   const completedLots  = auction?.lots?.filter((l) => l.status === "sold" || l.status === "unsold") ?? [];
+  const doneCount      = room ? Object.values(room.players).filter((p: any) => p.auctionDone).length : 0;
+  const totalCount     = room ? Object.values(room.players).length : 0;
 
-  // Count how many players clicked done
-  const doneCount  = room ? Object.values(room.players).filter((p: any) => p.auctionDone).length : 0;
-  const totalCount = room ? Object.values(room.players).length : 0;
-
+  // ── Loading ───────────────────────────────────────────
   if (!room) return (
-    <div style={styles.center}><p style={styles.loadingText}>Loading auction…</p></div>
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+      <p className="text-[#6b6860] font-serif text-base">Loading auction…</p>
+    </div>
   );
 
   // ── Pre-auction ───────────────────────────────────────
   if (!auction || auction.status === "waiting") {
     return (
-      <main style={styles.main}>
-        <div style={styles.grid} aria-hidden />
-        <div style={styles.waitCard}>
-          <h1 style={styles.waitTitle}>🏏 Auction Room</h1>
-          <p style={styles.waitSub}>All players have selected their teams. Time to build your squad.</p>
-          <div style={styles.teamList}>
+      <main className="min-h-screen bg-[#0a0a0f] px-4 py-8 font-serif relative">
+        <GridBg />
+        <div className="max-w-sm mx-auto mt-8 bg-[#13131a] border border-yellow-400/15 rounded-2xl p-6 sm:p-9 text-center relative z-10">
+          <h1 className="text-2xl text-[#f0ece0] mb-2">🏏 Auction Room</h1>
+          <p className="text-sm text-[#6b6860] mb-6">All players have selected their teams. Time to build your squad.</p>
+          <div className="flex flex-col gap-2 mb-6">
             {Object.values(room.players).map((p) => (
-              <div key={p.uid} style={styles.teamRow}>
-                <span style={styles.teamRowName}>{p.displayName}</span>
-                <span style={{
-                  ...styles.teamTag,
-                  background:  p.team ? TEAM_COLORS[p.team] + "22" : "transparent",
-                  color:       p.team ? TEAM_COLORS[p.team] : "#6b6860",
-                  borderColor: p.team ? TEAM_COLORS[p.team] + "55" : "rgba(255,255,255,0.08)",
+              <div key={p.uid} className="flex justify-between items-center">
+                <span className="text-sm text-[#f0ece0]">{p.displayName}</span>
+                <span className="text-xs font-mono font-bold px-3 py-1 rounded-full border" style={{
+                  background:  p.team ? TEAM_COLORS[p.team as IPLTeam] + "22" : "transparent",
+                  color:       p.team ? TEAM_COLORS[p.team as IPLTeam] : "#6b6860",
+                  borderColor: p.team ? TEAM_COLORS[p.team as IPLTeam] + "55" : "rgba(255,255,255,0.08)",
                 }}>
                   {p.team ?? "—"}
                 </span>
@@ -208,13 +209,16 @@ export default function AuctionPage() {
             ))}
           </div>
           {isHost ? (
-            <button style={{ ...styles.startBtn, ...(loading ? styles.disabled : {}) }} onClick={startAuction} disabled={loading}>
+            <button
+              className="w-full py-3.5 bg-[#ffc800] text-[#0a0a0f] rounded-lg text-sm font-bold disabled:opacity-40 cursor-pointer"
+              onClick={startAuction} disabled={loading}
+            >
               {loading ? "Starting…" : "Start Auction →"}
             </button>
           ) : (
-            <p style={styles.waitHint}>Waiting for host to start the auction…</p>
+            <p className="text-xs text-[#45443e] mt-3">Waiting for host to start the auction…</p>
           )}
-          {error && <p style={styles.errorText}>{error}</p>}
+          {error && <p className="text-[#ff5f57] text-sm mt-2">{error}</p>}
         </div>
       </main>
     );
@@ -223,11 +227,11 @@ export default function AuctionPage() {
   // ── Auction complete ──────────────────────────────────
   if (auction.status === "completed") {
     return (
-      <main style={styles.main}>
-        <div style={styles.grid} aria-hidden />
-        <div style={styles.waitCard}>
-          <h1 style={styles.waitTitle}>🎉 Auction Complete!</h1>
-          <p style={styles.waitSub}>All squads are set. Season is starting…</p>
+      <main className="min-h-screen bg-[#0a0a0f] px-4 py-8 font-serif relative">
+        <GridBg />
+        <div className="max-w-sm mx-auto mt-20 bg-[#13131a] border border-yellow-400/15 rounded-2xl p-9 text-center relative z-10">
+          <h1 className="text-2xl text-[#f0ece0] mb-2">🎉 Auction Complete!</h1>
+          <p className="text-sm text-[#6b6860]">All squads are set. Season is starting…</p>
         </div>
       </main>
     );
@@ -235,229 +239,111 @@ export default function AuctionPage() {
 
   // ── Main Auction UI ───────────────────────────────────
   return (
-    <main style={styles.main}>
-      <div style={styles.grid} aria-hidden />
-      <div style={styles.layout}>
+    <main className="min-h-screen bg-[#0a0a0f] font-serif relative">
+      <GridBg />
 
-        {/* LEFT — Current Lot */}
-        <div style={styles.leftCol}>
+      {/* ── DESKTOP layout (md+) ── */}
+      <div className="hidden md:block px-5 py-5 relative z-10">
+        <div className="max-w-[960px] mx-auto grid grid-cols-[1fr_300px] gap-5">
 
-          {/* Progress */}
-          <div style={styles.progressBar}>
-            <span style={styles.progressText}>
-              Lot {(auction.currentLotIndex ?? 0) + 1} of {auction.lots?.length ?? 0}
-            </span>
-            <span style={styles.progressText}>{completedLots.length} sold</span>
+          {/* LEFT */}
+          <div className="flex flex-col gap-3.5">
+            <ProgressBar auction={auction} completedLots={completedLots} />
+            {lot ? (
+              <>
+                <PlayerCard lot={lot} />
+                <TimerBar timerPct={timerPct} timerColor={timerColor} timeLeft={timeLeft} />
+                <CurrentBidBar lot={lot} />
+                <BidControls
+                  lot={lot} bidAmount={bidAmount} setBidAmount={setBidAmount}
+                  minBid={minBid} myBudget={myBudget} myTeam={myTeam}
+                  loading={loading} error={error} lastMsg={lastMsg}
+                  onBid={placeBid} myDone={myDone} doneCount={doneCount}
+                  totalCount={totalCount} isHost={isHost}
+                  allPlayersDone={allPlayersDone} onDone={markDone} onEndAuction={endAuction}
+                />
+                {lot.bidHistory?.length > 0 && <BidHistory lot={lot} />}
+              </>
+            ) : (
+              <p className="text-[#6b6860] text-sm">Loading next player…</p>
+            )}
           </div>
 
-          {lot ? (
-            <>
-              {/* Player Card */}
-              <div style={styles.playerCard}>
-                <div style={styles.playerMeta}>
-                  <span style={styles.roleBadge}>{lot.player.role.toUpperCase()}</span>
-                  <span style={styles.nationalityBadge}>{lot.player.nationality}</span>
-                </div>
-                <h2 style={styles.playerName}>{lot.player.name}</h2>
-                <div style={styles.ratingRow}>
-                  {lot.player.battingRating > 30 && (
-                    <div style={styles.ratingBox}>
-                      <span style={styles.ratingVal}>{lot.player.battingRating}</span>
-                      <span style={styles.ratingLabel}>BAT</span>
-                    </div>
-                  )}
-                  {lot.player.bowlingRating > 30 && (
-                    <div style={styles.ratingBox}>
-                      <span style={styles.ratingVal}>{lot.player.bowlingRating}</span>
-                      <span style={styles.ratingLabel}>BOWL</span>
-                    </div>
-                  )}
-                  {lot.player.wicketkeeperRating > 0 && (
-                    <div style={styles.ratingBox}>
-                      <span style={styles.ratingVal}>{lot.player.wicketkeeperRating}</span>
-                      <span style={styles.ratingLabel}>WK</span>
-                    </div>
-                  )}
-                </div>
-                <p style={styles.basePriceText}>Base price: {lot.player.basePrice} cr</p>
-              </div>
-
-              {/* Timer */}
-              <div style={styles.timerWrap}>
-                <div style={styles.timerTrack}>
-                  <div style={{ ...styles.timerFill, width: `${timerPct}%`, background: timerColor }} />
-                </div>
-                <span style={{ ...styles.timerNum, color: timerColor }}>{timeLeft}s</span>
-              </div>
-
-              {/* Current Bid */}
-              <div style={styles.currentBid}>
-                <span style={styles.currentBidLabel}>Current Bid</span>
-                <span style={styles.currentBidAmount}>{lot.currentBid} cr</span>
-                {lot.currentHighBidder
-                  ? <span style={{ ...styles.highBidder, color: TEAM_COLORS[lot.currentHighBidder] }}>{lot.currentHighBidder} leading</span>
-                  : <span style={styles.noBids}>No bids yet</span>}
-              </div>
-
-              {/* Bid Controls */}
-              <div style={styles.bidControls}>
-                <div style={styles.bidInputRow}>
-                  <button style={styles.nudgeBtn} onClick={() => setBidAmount(Math.max(minBid, parseFloat((bidAmount - 0.5).toFixed(1))))}>−</button>
-                  <input
-                    type="number"
-                    style={styles.bidInput}
-                    value={bidAmount}
-                    step={0.5}
-                    min={minBid}
-                    max={myBudget}
-                    onChange={(e) => setBidAmount(Number(e.target.value))}
-                  />
-                  <button style={styles.nudgeBtn} onClick={() => setBidAmount(Math.min(myBudget, parseFloat((bidAmount + 0.5).toFixed(1))))}>+</button>
-                </div>
-
-                <div style={styles.quickBids}>
-                  {[0.5, 1, 2, 5].map((inc) => (
-                    <button key={inc} style={styles.quickBtn}
-                      onClick={() => setBidAmount(Math.min(myBudget, parseFloat(((lot.currentBid ?? 0) + inc).toFixed(1))))}>
-                      +{inc}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  style={{
-                    ...styles.bidBtn,
-                    ...(loading || bidAmount < minBid || bidAmount > myBudget ? styles.disabled : {}),
-                    ...(myTeam ? { background: TEAM_COLORS[myTeam] } : {}),
-                  }}
-                  onClick={placeBid}
-                  disabled={loading || bidAmount < minBid || bidAmount > myBudget}
+          {/* RIGHT */}
+          <div className="flex flex-col gap-2.5">
+            <div className="flex gap-1 bg-[#0d0d14] rounded-xl p-1">
+              {(["mysquad", "overview"] as const).map((tab) => (
+                <button key={tab}
+                  className={`flex-1 py-2 rounded-lg text-xs font-serif cursor-pointer border-none transition-colors ${rightTab === tab ? "bg-[#1e1e2a] text-[#ffc800] font-semibold" : "bg-transparent text-[#6b6860]"}`}
+                  onClick={() => setRightTab(tab)}
                 >
-                  {loading ? "Placing…" : `Bid ${bidAmount}cr for ${myTeam}`}
+                  {tab === "mysquad" ? `My Squad${myCount > 0 ? ` (${myCount})` : ""}` : "All Teams"}
                 </button>
+              ))}
+            </div>
+            {rightTab === "mysquad" && myTeam && mySquad && (
+              <MySquadPanel players={myPlayers} team={myTeam} budget={myBudget} />
+            )}
+            {rightTab === "overview" && (
+              <OverviewPanel room={room} completedLots={completedLots} />
+            )}
+          </div>
+        </div>
+      </div>
 
-                {error   && <p style={styles.errorText}>{error}</p>}
-                {lastMsg && <p style={styles.successText}>{lastMsg}</p>}
+      {/* ── MOBILE layout (< md) ── */}
+      <div className="md:hidden flex flex-col h-screen relative z-10">
 
-                {/* Divider */}
-                <div style={styles.divider} />
-
-                {/* Done button — every player clicks this */}
-                {!myDone ? (
-                  <button
-                    style={{ ...styles.doneBtn, ...(loading ? styles.disabled : {}) }}
-                    onClick={markDone}
-                    disabled={loading}
-                  >
-                    ✓ I'm Done Bidding
-                  </button>
-                ) : (
-                  <div style={styles.doneStatus}>
-                    <span style={styles.doneCheck}>✓</span>
-                    <span style={styles.doneText}>
-                      You're done — {doneCount}/{totalCount} players ready
-                    </span>
-                  </div>
-                )}
-
-                {/* End Auction — host only, after all players done */}
-                {isHost && allPlayersDone && (
-                  <button
-                    style={{ ...styles.endAuctionBtn, ...(loading ? styles.disabled : {}) }}
-                    onClick={endAuction}
-                    disabled={loading}
-                  >
-                    ⏭ End Auction &amp; Start Season
-                  </button>
-                )}
-
-                {/* Waiting message for host */}
-                {isHost && !allPlayersDone && doneCount > 0 && (
-                  <p style={styles.waitingText}>
-                    Waiting for all players… {doneCount}/{totalCount} done
-                  </p>
-                )}
-              </div>
-
-              {/* Bid History */}
-              {lot.bidHistory?.length > 0 && (
-                <div style={styles.bidHistory}>
-                  <p style={styles.historyLabel}>Bid History</p>
-                  {[...lot.bidHistory].reverse().slice(0, 6).map((b, i) => (
-                    <div key={i} style={styles.historyRow}>
-                      <span style={{ color: TEAM_COLORS[b.team], fontWeight: 600 }}>{b.team}</span>
-                      <span style={styles.historyAmount}>{b.amount} cr</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <p style={styles.loadingText}>Loading next player…</p>
-          )}
+        {/* Top: Progress + Timer */}
+        <div className="px-3 pt-3 flex flex-col gap-2">
+          <ProgressBar auction={auction} completedLots={completedLots} />
+          <TimerBar timerPct={timerPct} timerColor={timerColor} timeLeft={timeLeft} />
         </div>
 
-        {/* RIGHT — My Squad / All Teams */}
-        <div style={styles.rightCol}>
+        {/* Mobile tab switcher */}
+        <div className="flex gap-1 mx-3 mt-2 bg-[#0d0d14] rounded-xl p-1">
+          <button
+            className={`flex-1 py-2 rounded-lg text-xs font-serif cursor-pointer border-none transition-colors ${mobileTab === "lot" ? "bg-[#1e1e2a] text-[#ffc800] font-semibold" : "bg-transparent text-[#6b6860]"}`}
+            onClick={() => setMobileTab("lot")}
+          >
+            🏏 Current Lot
+          </button>
+          <button
+            className={`flex-1 py-2 rounded-lg text-xs font-serif cursor-pointer border-none transition-colors ${mobileTab === "squad" ? "bg-[#1e1e2a] text-[#ffc800] font-semibold" : "bg-transparent text-[#6b6860]"}`}
+            onClick={() => setMobileTab("squad")}
+          >
+            My Squad {myCount > 0 ? `(${myCount})` : ""}
+          </button>
+        </div>
 
-          <div style={styles.rightTabs}>
-            <button
-              style={{ ...styles.rightTab, ...(rightTab === "mysquad" ? styles.rightTabActive : {}) }}
-              onClick={() => setRightTab("mysquad")}
-            >
-              My Squad {myCount > 0 ? `(${myCount})` : ""}
-            </button>
-            <button
-              style={{ ...styles.rightTab, ...(rightTab === "overview" ? styles.rightTabActive : {}) }}
-              onClick={() => setRightTab("overview")}
-            >
-              All Teams
-            </button>
-          </div>
-
-          {rightTab === "mysquad" && myTeam && mySquad && (
-            <MySquadPanel players={myPlayers} team={myTeam} budget={myBudget} />
-          )}
-
-          {rightTab === "overview" && (
-            <>
-              <div style={styles.squadsPanel}>
-                <p style={styles.squadsPanelTitle}>All Squads</p>
-                {Object.values(room.players).map((p) => {
-                  if (!p.team) return null;
-                  const squad  = room.squads[p.team];
-                  const count  = squad?.players?.length ?? 0;
-                  const budget = squad?.budgetRemaining ?? 0;
-                  const color  = TEAM_COLORS[p.team];
-                  const pDone  = (p as any).auctionDone;
-                  return (
-                    <div key={p.uid} style={styles.squadRow}>
-                      <span style={{ ...styles.squadTeam, color }}>{p.team}</span>
-                      <span style={styles.squadPlayerCount}>{count}/20</span>
-                      <div style={styles.squadBudgetBar}>
-                        <div style={{ ...styles.squadBudgetFill, width: `${(budget / 150) * 100}%`, background: color + "88" }} />
-                      </div>
-                      <span style={styles.squadBudgetNum}>{budget}</span>
-                      {pDone && <span style={styles.donePip}>✓</span>}
-                    </div>
-                  );
-                })}
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-3 pb-4 mt-2">
+          {mobileTab === "lot" ? (
+            lot ? (
+              <div className="flex flex-col gap-3">
+                <PlayerCard lot={lot} mobile />
+                <CurrentBidBar lot={lot} />
+                <BidControls
+                  lot={lot} bidAmount={bidAmount} setBidAmount={setBidAmount}
+                  minBid={minBid} myBudget={myBudget} myTeam={myTeam}
+                  loading={loading} error={error} lastMsg={lastMsg}
+                  onBid={placeBid} myDone={myDone} doneCount={doneCount}
+                  totalCount={totalCount} isHost={isHost}
+                  allPlayersDone={allPlayersDone} onDone={markDone} onEndAuction={endAuction}
+                  mobile
+                />
+                {lot.bidHistory?.length > 0 && <BidHistory lot={lot} />}
+                <OverviewPanel room={room} completedLots={completedLots} compact />
               </div>
-
-              {completedLots.length > 0 && (
-                <div style={styles.recentPanel}>
-                  <p style={styles.recentTitle}>Recent Sales</p>
-                  {completedLots.slice(-8).reverse().map((l, i) => (
-                    <div key={i} style={styles.recentRow}>
-                      <span style={styles.recentName}>{l.player.name}</span>
-                      {l.status === "sold"
-                        ? <span style={{ ...styles.recentSold, color: TEAM_COLORS[l.soldTo!] }}>{l.soldTo} · {l.soldPrice}cr</span>
-                        : <span style={styles.recentUnsold}>Unsold</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
+            ) : (
+              <p className="text-[#6b6860] text-sm text-center mt-10">Loading next player…</p>
+            )
+          ) : (
+            myTeam && mySquad ? (
+              <MySquadPanel players={myPlayers} team={myTeam} budget={myBudget} />
+            ) : (
+              <p className="text-[#6b6860] text-sm text-center mt-10">No squad data yet.</p>
+            )
           )}
         </div>
       </div>
@@ -465,105 +351,252 @@ export default function AuctionPage() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────
 
-const styles: Record<string, React.CSSProperties> = {
-  main:   { minHeight: "100vh", background: "#0a0a0f", padding: "20px", fontFamily: "'Georgia', serif", position: "relative" },
-  grid:   { position: "fixed", inset: 0, backgroundImage: "linear-gradient(rgba(255,200,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,200,0,0.03) 1px, transparent 1px)", backgroundSize: "48px 48px", pointerEvents: "none", zIndex: 0 },
-  center: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0a0a0f" },
-  layout: { maxWidth: "960px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 300px", gap: "20px", position: "relative", zIndex: 1 },
-  leftCol:  { display: "flex", flexDirection: "column", gap: "14px" },
-  rightCol: { display: "flex", flexDirection: "column", gap: "10px" },
+function GridBg() {
+  return (
+    <div
+      className="fixed inset-0 pointer-events-none z-0"
+      style={{
+        backgroundImage: "linear-gradient(rgba(255,200,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,200,0,0.03) 1px, transparent 1px)",
+        backgroundSize: "48px 48px",
+      }}
+      aria-hidden
+    />
+  );
+}
 
-  waitCard:    { maxWidth: "480px", margin: "80px auto", background: "#13131a", border: "1px solid rgba(255,200,0,0.15)", borderRadius: "16px", padding: "36px", textAlign: "center", position: "relative", zIndex: 1 },
-  waitTitle:   { fontSize: "24px", color: "#f0ece0", margin: "0 0 10px" },
-  waitSub:     { fontSize: "14px", color: "#6b6860", margin: "0 0 24px" },
-  teamList:    { display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" },
-  teamRow:     { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  teamRowName: { fontSize: "14px", color: "#f0ece0" },
-  teamTag:     { fontSize: "12px", fontFamily: "'Courier New', monospace", fontWeight: 700, padding: "3px 10px", borderRadius: "20px", border: "1px solid", letterSpacing: "0.06em" },
-  startBtn:    { width: "100%", padding: "14px", background: "#ffc800", color: "#0a0a0f", border: "none", borderRadius: "8px", fontSize: "15px", fontWeight: 700, fontFamily: "'Georgia', serif", cursor: "pointer" },
-  waitHint:    { fontSize: "13px", color: "#45443e", margin: "12px 0 0" },
+function ProgressBar({ auction, completedLots }: { auction: any; completedLots: any[] }) {
+  return (
+    <div className="flex justify-between bg-[#13131a] rounded-lg px-4 py-2.5 border border-white/5">
+      <span className="text-xs text-[#6b6860] tracking-wider">
+        Lot {(auction.currentLotIndex ?? 0) + 1} of {auction.lots?.length ?? 0}
+      </span>
+      <span className="text-xs text-[#6b6860] tracking-wider">{completedLots.length} sold</span>
+    </div>
+  );
+}
 
-  rightTabs:      { display: "flex", gap: "4px", background: "#0d0d14", borderRadius: "10px", padding: "4px" },
-  rightTab:       { flex: 1, padding: "8px", border: "none", borderRadius: "7px", background: "transparent", color: "#6b6860", fontSize: "12px", fontFamily: "'Georgia', serif", cursor: "pointer" },
-  rightTabActive: { background: "#1e1e2a", color: "#ffc800", fontWeight: 600 },
+function PlayerCard({ lot, mobile }: { lot: any; mobile?: boolean }) {
+  return (
+    <div className="bg-[#13131a] border border-yellow-400/15 rounded-xl p-5">
+      <div className="flex gap-2 mb-2">
+        <span className="text-[10px] tracking-widest text-[#ffc800] bg-yellow-400/8 border border-yellow-400/20 rounded-full px-2.5 py-0.5">
+          {lot.player.role.toUpperCase()}
+        </span>
+        <span className="text-[10px] tracking-wider text-[#6b6860] bg-white/4 border border-white/8 rounded-full px-2.5 py-0.5">
+          {lot.player.nationality}
+        </span>
+      </div>
+      <h2 className={`text-[#f0ece0] font-bold mb-3 ${mobile ? "text-xl" : "text-3xl"}`}>
+        {lot.player.name}
+      </h2>
+      <div className="flex gap-4 mb-2">
+        {lot.player.battingRating > 30 && (
+          <div className="text-center">
+            <span className="block text-xl text-[#ffc800] font-bold">{lot.player.battingRating}</span>
+            <span className="block text-[10px] text-[#6b6860] tracking-wider">BAT</span>
+          </div>
+        )}
+        {lot.player.bowlingRating > 30 && (
+          <div className="text-center">
+            <span className="block text-xl text-[#ffc800] font-bold">{lot.player.bowlingRating}</span>
+            <span className="block text-[10px] text-[#6b6860] tracking-wider">BOWL</span>
+          </div>
+        )}
+        {lot.player.wicketkeeperRating > 0 && (
+          <div className="text-center">
+            <span className="block text-xl text-[#ffc800] font-bold">{lot.player.wicketkeeperRating}</span>
+            <span className="block text-[10px] text-[#6b6860] tracking-wider">WK</span>
+          </div>
+        )}
+      </div>
+      <p className="text-xs text-[#45443e]">Base price: {lot.player.basePrice} cr</p>
+    </div>
+  );
+}
 
-  progressBar:  { display: "flex", justifyContent: "space-between", background: "#13131a", borderRadius: "8px", padding: "10px 16px", border: "1px solid rgba(255,255,255,0.06)" },
-  progressText: { fontSize: "12px", color: "#6b6860", letterSpacing: "0.06em" },
+function TimerBar({ timerPct, timerColor, timeLeft }: { timerPct: number; timerColor: string; timeLeft: number }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex-1 h-1.5 bg-white/6 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${timerPct}%`, background: timerColor }}
+        />
+      </div>
+      <span className="text-lg font-bold font-mono min-w-[36px]" style={{ color: timerColor }}>
+        {timeLeft}s
+      </span>
+    </div>
+  );
+}
 
-  playerCard:       { background: "#13131a", border: "1px solid rgba(255,200,0,0.15)", borderRadius: "12px", padding: "24px" },
-  playerMeta:       { display: "flex", gap: "8px", marginBottom: "10px" },
-  roleBadge:        { fontSize: "10px", letterSpacing: "0.1em", color: "#ffc800", background: "rgba(255,200,0,0.08)", border: "1px solid rgba(255,200,0,0.2)", borderRadius: "20px", padding: "3px 10px" },
-  nationalityBadge: { fontSize: "10px", letterSpacing: "0.08em", color: "#6b6860", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "20px", padding: "3px 10px" },
-  playerName:       { fontSize: "28px", color: "#f0ece0", margin: "0 0 12px", fontWeight: 700 },
-  ratingRow:        { display: "flex", gap: "12px", marginBottom: "10px" },
-  ratingBox:        { textAlign: "center" as const },
-  ratingVal:        { display: "block", fontSize: "22px", color: "#ffc800", fontWeight: 700 },
-  ratingLabel:      { display: "block", fontSize: "10px", color: "#6b6860", letterSpacing: "0.08em" },
-  basePriceText:    { fontSize: "13px", color: "#45443e", margin: 0 },
+function CurrentBidBar({ lot }: { lot: any }) {
+  return (
+    <div className="bg-[#13131a] border border-white/6 rounded-xl px-5 py-4 flex items-center gap-4">
+      <div>
+        <p className="text-xs text-[#6b6860] tracking-wider uppercase mb-0.5">Current Bid</p>
+        <p className="text-3xl font-bold font-mono text-[#f0ece0]">{lot.currentBid} cr</p>
+      </div>
+      {lot.currentHighBidder
+        ? <span className="ml-auto text-sm font-bold" style={{ color: TEAM_COLORS[lot.currentHighBidder as IPLTeam] }}>
+            {lot.currentHighBidder} leading
+          </span>
+        : <span className="ml-auto text-sm text-[#45443e]">No bids yet</span>
+      }
+    </div>
+  );
+}
 
-  timerWrap:  { display: "flex", alignItems: "center", gap: "12px" },
-  timerTrack: { flex: 1, height: "6px", background: "rgba(255,255,255,0.06)", borderRadius: "3px", overflow: "hidden" },
-  timerFill:  { height: "100%", borderRadius: "3px", transition: "width 0.5s linear, background 0.3s" },
-  timerNum:   { fontSize: "18px", fontWeight: 700, fontFamily: "'Courier New', monospace", minWidth: "36px" },
+function BidControls({
+  lot, bidAmount, setBidAmount, minBid, myBudget, myTeam,
+  loading, error, lastMsg, onBid, myDone, doneCount, totalCount,
+  isHost, allPlayersDone, onDone, onEndAuction, mobile,
+}: any) {
+  return (
+    <div className="bg-[#13131a] border border-white/6 rounded-xl p-5 flex flex-col gap-3">
+      {/* Bid input row */}
+      <div className="flex items-center gap-2">
+        <button
+          className="w-10 h-10 bg-[#0d0d14] border border-white/8 rounded-lg text-[#f0ece0] text-lg cursor-pointer flex-shrink-0"
+          onClick={() => setBidAmount(Math.max(minBid, parseFloat((bidAmount - 0.5).toFixed(1))))}
+        >−</button>
+        <input
+          type="number"
+          className="flex-1 bg-[#0d0d14] border border-white/8 rounded-lg px-3 py-2 text-[#ffc800] text-xl font-mono font-bold text-center outline-none min-w-0"
+          value={bidAmount}
+          step={0.5}
+          min={minBid}
+          max={myBudget}
+          onChange={(e) => setBidAmount(Number(e.target.value))}
+        />
+        <button
+          className="w-10 h-10 bg-[#0d0d14] border border-white/8 rounded-lg text-[#f0ece0] text-lg cursor-pointer flex-shrink-0"
+          onClick={() => setBidAmount(Math.min(myBudget, parseFloat((bidAmount + 0.5).toFixed(1))))}
+        >+</button>
+      </div>
 
-  currentBid:       { background: "#13131a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "12px", padding: "20px 24px", display: "flex", alignItems: "center", gap: "16px" },
-  currentBidLabel:  { fontSize: "12px", color: "#6b6860", letterSpacing: "0.08em", textTransform: "uppercase" as const },
-  currentBidAmount: { fontSize: "32px", fontWeight: 700, color: "#f0ece0", fontFamily: "'Courier New', monospace" },
-  highBidder:       { fontSize: "14px", fontWeight: 700, marginLeft: "auto" },
-  noBids:           { fontSize: "13px", color: "#45443e", marginLeft: "auto" },
+      {/* Quick bid buttons */}
+      <div className="grid grid-cols-4 gap-2">
+        {[0.5, 1, 2, 5].map((inc) => (
+          <button key={inc}
+            className="py-1.5 bg-[#0d0d14] border border-white/6 rounded-lg text-[#6b6860] text-xs cursor-pointer"
+            onClick={() => setBidAmount(Math.min(myBudget, parseFloat(((lot.currentBid ?? 0) + inc).toFixed(1))))}
+          >
+            +{inc}
+          </button>
+        ))}
+      </div>
 
-  bidControls: { background: "#13131a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "12px", padding: "20px 24px", display: "flex", flexDirection: "column" as const, gap: "12px" },
-  bidInputRow: { display: "flex", alignItems: "center", gap: "8px" },
-  nudgeBtn:    { width: "36px", height: "36px", background: "#0d0d14", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "6px", color: "#f0ece0", fontSize: "18px", cursor: "pointer", fontFamily: "'Georgia', serif" },
-  bidInput:    { flex: 1, background: "#0d0d14", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "6px", padding: "8px 12px", color: "#ffc800", fontSize: "20px", fontFamily: "'Courier New', monospace", fontWeight: 700, textAlign: "center" as const, outline: "none" },
-  quickBids:   { display: "flex", gap: "8px" },
-  quickBtn:    { flex: 1, padding: "6px", background: "#0d0d14", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "6px", color: "#6b6860", fontSize: "12px", cursor: "pointer", fontFamily: "'Georgia', serif" },
-  bidBtn:      { padding: "13px", color: "#0a0a0f", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 700, fontFamily: "'Georgia', serif", cursor: "pointer" },
+      {/* Budget info */}
+      <p className="text-xs text-[#45443e]">Budget: {myBudget} cr remaining</p>
 
-  divider: { height: "1px", background: "rgba(255,255,255,0.06)", margin: "4px 0" },
+      {/* Bid button */}
+      <button
+        className="w-full py-3.5 rounded-lg text-sm font-bold text-[#0a0a0f] cursor-pointer border-none disabled:opacity-40"
+        style={{ background: myTeam ? TEAM_COLORS[myTeam as IPLTeam] : "#ffc800", ...(loading || bidAmount < minBid || bidAmount > myBudget ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+        onClick={onBid}
+        disabled={loading || bidAmount < minBid || bidAmount > myBudget}
+      >
+        {loading ? "Placing…" : `Bid ${bidAmount}cr for ${myTeam}`}
+      </button>
 
-  doneBtn: {
-    padding: "11px", background: "rgba(76,175,80,0.1)", color: "#4caf50",
-    border: "1px solid rgba(76,175,80,0.3)", borderRadius: "8px",
-    fontSize: "13px", fontWeight: 700, fontFamily: "'Georgia', serif", cursor: "pointer",
-  },
-  doneStatus: { display: "flex", alignItems: "center", gap: "8px", padding: "8px 0" },
-  doneCheck:  { fontSize: "16px", color: "#4caf50" },
-  doneText:   { fontSize: "12px", color: "#4caf50" },
+      {error   && <p className="text-[#ff5f57] text-sm">{error}</p>}
+      {lastMsg && <p className="text-[#4caf50] text-sm">{lastMsg}</p>}
 
-  endAuctionBtn: {
-    padding: "13px", background: "rgba(255,95,87,0.1)", color: "#ff5f57",
-    border: "1px solid rgba(255,95,87,0.3)", borderRadius: "8px",
-    fontSize: "14px", fontWeight: 700, fontFamily: "'Georgia', serif", cursor: "pointer",
-  },
-  waitingText: { fontSize: "12px", color: "#6b6860", textAlign: "center" as const, margin: 0 },
+      <div className="h-px bg-white/6" />
 
-  bidHistory:   { background: "#13131a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "12px", padding: "16px 20px" },
-  historyLabel: { fontSize: "11px", color: "#45443e", letterSpacing: "0.08em", textTransform: "uppercase" as const, margin: "0 0 10px" },
-  historyRow:   { display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" },
-  historyAmount:{ fontSize: "13px", color: "#f0ece0" },
+      {/* Done button */}
+      {!myDone ? (
+        <button
+          className="w-full py-3 bg-green-500/10 text-[#4caf50] border border-green-500/30 rounded-lg text-sm font-bold cursor-pointer disabled:opacity-40"
+          onClick={onDone} disabled={loading}
+        >
+          ✓ I'm Done Bidding
+        </button>
+      ) : (
+        <div className="flex items-center gap-2 py-2">
+          <span className="text-[#4caf50] text-base">✓</span>
+          <span className="text-xs text-[#4caf50]">You're done — {doneCount}/{totalCount} players ready</span>
+        </div>
+      )}
 
-  squadsPanel:      { background: "#13131a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "12px", padding: "16px 20px" },
-  squadsPanelTitle: { fontSize: "11px", color: "#45443e", letterSpacing: "0.08em", textTransform: "uppercase" as const, margin: "0 0 12px" },
-  squadRow:         { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" },
-  squadTeam:        { fontSize: "13px", fontFamily: "'Courier New', monospace", fontWeight: 700, width: "44px" },
-  squadPlayerCount: { fontSize: "11px", color: "#6b6860", width: "36px" },
-  squadBudgetBar:   { flex: 1, height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "2px", overflow: "hidden" },
-  squadBudgetFill:  { height: "100%", borderRadius: "2px", transition: "width 0.3s" },
-  squadBudgetNum:   { fontSize: "11px", color: "#6b6860", width: "28px", textAlign: "right" as const },
-  donePip:          { fontSize: "10px", color: "#4caf50" },
+      {isHost && allPlayersDone && (
+        <button
+          className="w-full py-3 bg-red-500/10 text-[#ff5f57] border border-red-500/30 rounded-lg text-sm font-bold cursor-pointer disabled:opacity-40"
+          onClick={onEndAuction} disabled={loading}
+        >
+          ⏭ End Auction &amp; Start Season
+        </button>
+      )}
 
-  recentPanel:  { background: "#13131a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "12px", padding: "16px 20px" },
-  recentTitle:  { fontSize: "11px", color: "#45443e", letterSpacing: "0.08em", textTransform: "uppercase" as const, margin: "0 0 12px" },
-  recentRow:    { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" },
-  recentName:   { fontSize: "12px", color: "#f0ece0" },
-  recentSold:   { fontSize: "11px", fontWeight: 700, fontFamily: "'Courier New', monospace" },
-  recentUnsold: { fontSize: "11px", color: "#45443e" },
+      {isHost && !allPlayersDone && doneCount > 0 && (
+        <p className="text-xs text-[#6b6860] text-center">
+          Waiting for all players… {doneCount}/{totalCount} done
+        </p>
+      )}
+    </div>
+  );
+}
 
-  loadingText:  { color: "#6b6860", fontFamily: "'Georgia', serif", fontSize: "15px" },
-  errorText:    { color: "#ff5f57", fontSize: "13px", margin: 0 },
-  successText:  { color: "#4caf50", fontSize: "13px", margin: 0 },
-  disabled:     { opacity: 0.4, cursor: "not-allowed" },
-};
+function BidHistory({ lot }: { lot: any }) {
+  return (
+    <div className="bg-[#13131a] border border-white/6 rounded-xl px-5 py-4">
+      <p className="text-[11px] text-[#45443e] tracking-wider uppercase mb-2.5">Bid History</p>
+      {[...lot.bidHistory].reverse().slice(0, 6).map((b: any, i: number) => (
+        <div key={i} className="flex justify-between py-1 border-b border-white/4">
+          <span className="font-semibold" style={{ color: TEAM_COLORS[b.team as IPLTeam] }}>{b.team}</span>
+          <span className="text-sm text-[#f0ece0]">{b.amount} cr</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OverviewPanel({ room, completedLots, compact }: { room: Room; completedLots: any[]; compact?: boolean }) {
+  return (
+    <>
+      <div className="bg-[#13131a] border border-white/6 rounded-xl px-5 py-4">
+        <p className="text-[11px] text-[#45443e] tracking-wider uppercase mb-3">All Squads</p>
+        {Object.values(room.players).map((p) => {
+          if (!p.team) return null;
+          const squad  = room.squads[p.team];
+          const count  = squad?.players?.length ?? 0;
+          const budget = squad?.budgetRemaining ?? 0;
+          const color  = TEAM_COLORS[p.team as IPLTeam];
+          const pDone  = (p as any).auctionDone;
+          return (
+            <div key={p.uid} className="flex items-center gap-2 mb-2.5">
+              <span className="text-sm font-mono font-bold w-11" style={{ color }}>{p.team}</span>
+              <span className="text-[11px] text-[#6b6860] w-9">{count}/20</span>
+              <div className="flex-1 h-1 bg-white/6 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-300"
+                  style={{ width: `${(budget / 150) * 100}%`, background: color + "88" }} />
+              </div>
+              <span className="text-[11px] text-[#6b6860] w-7 text-right">{budget}</span>
+              {pDone && <span className="text-[10px] text-[#4caf50]">✓</span>}
+            </div>
+          );
+        })}
+      </div>
+
+      {completedLots.length > 0 && (
+        <div className="bg-[#13131a] border border-white/6 rounded-xl px-5 py-4 mt-2.5">
+          <p className="text-[11px] text-[#45443e] tracking-wider uppercase mb-3">Recent Sales</p>
+          {completedLots.slice(-8).reverse().map((l, i) => (
+            <div key={i} className="flex justify-between items-center py-1.5 border-b border-white/4">
+              <span className="text-xs text-[#f0ece0]">{l.player.name}</span>
+              {l.status === "sold"
+                ? <span className="text-[11px] font-bold font-mono" style={{ color: TEAM_COLORS[l.soldTo as IPLTeam] }}>
+                    {l.soldTo} · {l.soldPrice}cr
+                  </span>
+                : <span className="text-[11px] text-[#45443e]">Unsold</span>
+              }
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}

@@ -32,7 +32,12 @@ export type PlayerNationality =
   | "New Zealand"
   | "West Indies"
   | "Sri Lanka"
-  | "Afghanistan";
+  | "Afghanistan"
+  | "Bangladesh"
+  | "Pakistan"
+  | "Zimbabwe"
+  | "Ireland"
+  | "Singapore";
 
 export type BallOutcome =
   | "dot"
